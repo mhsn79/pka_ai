@@ -1,3 +1,5 @@
 psycopg2-binary==2.9.10
+openai==1.21.1
+# numpy==1.26.4
 pgvector
 streamlit
