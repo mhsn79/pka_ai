@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from pgvector.psycopg2 import register_vector
 from openai import OpenAI 
+import re
 
 # # Database configuration
 # DB_HOST = "localhost"
@@ -32,11 +33,13 @@ conn = psycopg2.connect(
     user=DB_USER,
     password=DB_PASSWORD
 )
+# pka-ai:us-central1:pka-ai-vdb
+
 register_vector(conn)
 cursor = conn.cursor(cursor_factory=RealDictCursor)
 
 # Streamlit configuration
-st.set_page_config(layout="wide", page_title="PKA Chat", page_icon="💬")
+st.set_page_config(layout="wide", page_title="Ask Prof. Khurshid Ahmad", page_icon="💬")
 
 # Sidebar for chat history
 if "chat_history" not in st.session_state:
@@ -92,7 +95,8 @@ def generate_response(query, context):
 
     Your response should:
     - Answer the question concisely and accurately.
-    - Include numbered references for the excerpts that support your answer.
+    - Include numbered references for the excerpts that support your answer, at the end in the following Suggested format:
+        - Excerpt [[[1]]]: [Book Title], Page: 123
     - If no relevant information is available, say "I couldn't find relevant information."
 
     Response:
@@ -109,12 +113,37 @@ def generate_response(query, context):
     # print("Response: ", response)
     return response.choices[0].message.content, True
 
+def format_excerpts_and_extract_numbers(response_text):
+    """
+    Extract excerpt numbers and replace the format 'Excerpt [[[n]]]' with 'Excerpt [n]'
+    in the given response text. Also, return the list of extracted numbers.
+
+    Args:
+    response_text (str): The text containing excerpt references.
+
+    Returns:
+    tuple: A tuple containing the formatted text and a list of extracted numbers.
+    """
+    # Regular expression to find 'Excerpt [[[n]]]'
+    pattern = r'\[\[\[(\d+)\]\]\]'
+    
+    # Extract all numbers into a list
+    numbers = re.findall(pattern, response_text)
+    
+    # Replace with 'Excerpt [n]'
+    formatted_text = re.sub(pattern, r'[\1]', response_text)
+    
+    # Convert extracted numbers to integers
+    numbers = list(map(int, numbers))
+    
+    return formatted_text, numbers
+
 # Main app
 st.title("From the Library of Prof. Khurshid Ahmad 💬")
-st.write("Ask questions from Prof. Khurshid Ahmad's Library.")
+st.write("Ask questions from Prof. Khurshid Ahmad's Library. This is a Proof of Concept (PoC) for the PKA AI project.")
 
 # Chat input
-user_input = st.text_input("Type your question here...", key="user_input")
+user_input = st.text_input("Type question here...", key="user_input")
 # found = False
 if st.button("Submit") and user_input:
     # Query the vector database
@@ -123,12 +152,20 @@ if st.button("Submit") and user_input:
     # Generate response
     response, found = generate_response(user_input, references)
 
+    # if found:
+    # Format the excerpts and extract numbers
+    formatted_response, extracted_numbers = format_excerpts_and_extract_numbers(response)
+    if not formatted_response:
+        formatted_response = response
+        extracted_numbers = []
+        
     # Update chat history
     st.session_state.chat_history.append({
         "user": user_input,
-        "assistant": response,
+        "assistant": formatted_response,
         "references": references,
-        "found": found
+        "found": found,
+        "excerpts": extracted_numbers
     })
 
 # Display chat history
@@ -141,10 +178,11 @@ for chat in st.session_state.chat_history:
 for chat in st.session_state.chat_history:
     st.markdown(f"**You:** {chat['user']}")
     st.markdown(f"**Assistant:** {chat['assistant']}")
-    print(chat["found"])
+    print(chat["excerpts"])
     if chat["references"] and chat["found"]:
         st.markdown("**References:**")
         for i, ref in enumerate(chat["references"], start=1):
-            st.markdown(f":blue[- **Excerpt {i}:** {ref['content']} (from '{ref['book_title']}', Page: {ref['page_number']})]")
+            if i in chat["excerpts"]:
+                st.markdown(f":blue[- **Excerpt {i}:** {ref['content']} (from '{ref['book_title']}', Page: {ref['page_number']})]")
     st.markdown("---")
 
