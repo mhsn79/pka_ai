@@ -174,7 +174,7 @@ for chat in st.session_state.chat_history:
     st.sidebar.markdown(f"**You asked:** {chat['user']}")
     # st.sidebar.markdown(f"**From PKA Library:** {chat['assistant']}")
 
-ref_content_len = 700
+ref_content_len = 500
 # Display chat
 for chat in st.session_state.chat_history:
     st.markdown(f"**You asked:** {chat['user']}")
