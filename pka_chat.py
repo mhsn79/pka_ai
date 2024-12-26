@@ -183,6 +183,10 @@ for chat in st.session_state.chat_history:
         st.markdown("**References:**")
         for i, ref in enumerate(chat["references"], start=1):
             if i in chat["excerpts"]:
-                st.markdown(f":blue[- **Excerpt {i}:** {ref['content']} (from '{ref['book_title']}', Page: {ref['page_number']})]")
+                st.markdown(f""":blue
+                            - **Excerpt {i}:** 
+                            {ref['content']} \n
+                            [REFERENCE from '{ref['book_title']}', Page: {ref['page_number']}]
+                            """)
     st.markdown("---")
 
