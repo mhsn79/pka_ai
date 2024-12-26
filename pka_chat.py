@@ -187,7 +187,7 @@ for chat in st.session_state.chat_history:
                 content_some = ref['content'][:ref_content_len] + "..." if len(ref['content']) > ref_content_len else ref['content']
                 st.markdown(f""":blue
                             - **Excerpt {i}:** 
-                            {ref['content']} \n
+                            {content_some} \n
                             [REFERENCE from '{ref['book_title']}', Page: {ref['page_number']}]
                             """)
     st.markdown("---")
