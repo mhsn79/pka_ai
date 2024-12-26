@@ -174,15 +174,17 @@ for chat in st.session_state.chat_history:
     st.sidebar.markdown(f"**You asked:** {chat['user']}")
     # st.sidebar.markdown(f"**From PKA Library:** {chat['assistant']}")
 
+ref_content_len = 300
 # Display chat
 for chat in st.session_state.chat_history:
-    st.markdown(f"**You:** {chat['user']}")
-    st.markdown(f"**Assistant:** {chat['assistant']}")
+    st.markdown(f"**You asked:** {chat['user']}")
+    st.markdown(f"**PKA AI Assistant:** {chat['assistant']}")
     print(chat["excerpts"])
     if chat["references"] and chat["found"]:
         st.markdown("**References:**")
         for i, ref in enumerate(chat["references"], start=1):
             if i in chat["excerpts"]:
+                content_some = ref['content'][:ref_content_len] + "..." if len(ref['content']) > ref_content_len else ref['content']
                 st.markdown(f""":blue
                             - **Excerpt {i}:** 
                             {ref['content']} \n
