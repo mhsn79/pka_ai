@@ -24,7 +24,7 @@ client = OpenAI(
 )
 
 # Similarity threshold
-SIMILARITY_THRESHOLD = 0.75
+SIMILARITY_THRESHOLD = 0.7
 
 # Connect to PostgreSQL
 conn = psycopg2.connect(
