@@ -141,6 +141,7 @@ def format_excerpts_and_extract_numbers(response_text):
 # Main app
 st.title("From the Library of Prof. Khurshid Ahmad 💬")
 st.write("Ask questions from Prof. Khurshid Ahmad's Library. This is a Proof of Concept (PoC) for the PKA AI project.")
+st.write("You can use any language (English, Urdu, Arabic, Roman Urdu etc.) for asking question.")
 
 # Chat input
 user_input = st.text_input("Type question here...", key="user_input")
