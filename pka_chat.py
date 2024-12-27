@@ -65,7 +65,7 @@ def query_vector_db(query_text):
         FROM public.documents
         WHERE 1 - (embedding <=> %s::vector) >= %s
         ORDER BY similarity DESC
-        LIMIT 5;
+        LIMIT 7;
     """, (query_embedding, query_embedding, SIMILARITY_THRESHOLD))
     results = cursor.fetchall()
     # print("Refs:", results)
