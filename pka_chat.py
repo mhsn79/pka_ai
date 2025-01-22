@@ -4,6 +4,9 @@ from psycopg2.extras import RealDictCursor
 from pgvector.psycopg2 import register_vector
 from openai import OpenAI 
 import re
+import json
+
+# from st_supabase_connection import SupabaseConnection
 
 # # Database configuration
 # DB_HOST = "localhost"
@@ -14,6 +17,9 @@ DB_HOST = st.secrets["DB_HOST"]
 DB_NAME =st.secrets["DB_NAME"] 
 DB_USER = st.secrets["DB_USER"] 
 DB_PASSWORD = st.secrets["DB_PASSWORD"] 
+
+# Streamlit configuration
+st.set_page_config(layout="wide", page_title="From the Library of Prof. Khurshid Ahmad", page_icon="💬")
 
 # OpenAI API configuration
 # # OPENAI_API_KEY = "your_openai_api_key"
@@ -31,21 +37,52 @@ conn = psycopg2.connect(
     host=DB_HOST,
     database=DB_NAME,
     user=DB_USER,
-    password=DB_PASSWORD
+    password=DB_PASSWORD,
+    port=5432
 )
 # pka-ai:us-central1:pka-ai-vdb
+# conn2 = st.connection("supabase",type=SupabaseConnection)
 
 register_vector(conn)
 cursor = conn.cursor(cursor_factory=RealDictCursor)
-
-# Streamlit configuration
-st.set_page_config(layout="wide", page_title="Ask Prof. Khurshid Ahmad", page_icon="💬")
 
 # Sidebar for chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 # Functions
+# Functions
+def refine_question(user_question):
+    """
+    Refine the user's question to extract up to three distinct questions.
+    """
+    prompt = f"""
+    User's input is a question for chatbot. User may have asked question in unclear way and may have added unnecessary text and formatting intructions within the question. 
+    Your job is to separate the formatting intrections and provide refined question with clear keywords. Provide Question in English and it's translation in Urdu Language. 
+    Ensure the output strictly adheres to the following JSON format without quotes:
+    
+    {{
+        "Question": {{
+            "en": "User's question in English",
+            "ur": "User's question in Urdu"
+        }},
+        "Formatting": "Formatting instructions"
+    }}
+    
+    User's input:
+    {user_question}
+    """
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant for refining user questions."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    print("Refine: ", response)
+    refined_questions = response.choices[0].message.content # response["choices"][0]["message"]["content"]
+    return refined_questions
+
 def query_vector_db(query_text):
     """
     Query the PostgreSQL vector database to retrieve similar texts.
@@ -65,13 +102,34 @@ def query_vector_db(query_text):
         FROM public.documents
         WHERE 1 - (embedding <=> %s::vector) >= %s
         ORDER BY similarity DESC
-        LIMIT 7;
+        LIMIT 5;
     """, (query_embedding, query_embedding, SIMILARITY_THRESHOLD))
     results = cursor.fetchall()
+
+    # # Perform similarity search
+    # query = """
+    #     SELECT id, title, content, book_title, author, page_number,
+    #         1 - (embedding <=> %s::vector) AS similarity
+    #     FROM public.documents
+    #     WHERE 1 - (embedding <=> %s::vector) >= %s
+    #     ORDER BY similarity DESC
+    #     LIMIT 5;
+    # """
+    # # Parameters for the query
+    # params = (query_embedding, query_embedding, SIMILARITY_THRESHOLD)
+
+    # # Execute the query
+    # with conn.cursor() as cursor:
+    #     cursor.execute(query, params)
+    #     results = cursor.fetchall()
+
+    # # Process results
+    # for result in results:
+    #     print(result)
     # print("Refs:", results)
     return results
 
-def generate_response(query, context):
+def generate_response(query, context, formatting):
     """
     Generate a response using OpenAI GPT based on the provided context.
     """
@@ -93,15 +151,19 @@ def generate_response(query, context):
     Excerpts:
     {context_text}
 
+    Formatting Instructions:
+    - {formatting}
+
     Your response should:
-    - Answer the question concisely and accurately.
+    - Answer the question elaboratively and accurately.
+    - Include relevant information from the excerpts.
     - Include numbered references for the excerpts that support your answer, at the end in the following Suggested format:
         - Excerpt [[[1]]]: [Book Title], Page: 123
     - If no relevant information is available, say "I couldn't find relevant information."
 
     Response:
     """
-    
+
     # Call OpenAI API
     response = client.chat.completions.create( # openai.ChatCompletion.create(
         model="gpt-4o",
@@ -147,11 +209,60 @@ st.write("You can use any language (English, Urdu, Arabic, Roman Urdu etc.) for 
 user_input = st.text_input("Type question here...", key="user_input")
 # found = False
 if st.button("Submit") and user_input:
-    # Query the vector database
-    references = query_vector_db(user_input)
-    
+       # Refine the user's question
+    refined_questions_json = refine_question(user_input)
+    print("Refined2: ", refined_questions_json)
+    try:
+        parsed_data = json.loads(refined_questions_json)
+        question_en = parsed_data["Question"]["en"]  # English version of the question
+        question_ur = parsed_data["Question"]["ur"]  # Urdu version of the question
+        formatting = parsed_data["Formatting"]  # Formatting instructions
+
+        if not formatting:
+            formatting = "No specific formatting instructions provided."
+
+        # Output extracted information
+        print(f"English Question: {question_en}")
+        print(f"Urdu Question: {question_ur}")
+        print(f"Formatting Instructions: {formatting}")
+
+        # st.json(refined_questions_json)
+
+        # Parse refined questions
+        refined_questions = [ question_en, question_ur] # eval(refined_questions_json)["questions"]
+    except Exception as e:
+        st.error("Error parsing refined questions. Please try again." + str(e))
+        refined_questions = []
+
+    final_response = ""
+    all_references = []
+    # Process each refined question
+    for question in refined_questions:
+        st.markdown(f"**Processing question:** {question}")
+
+        # Query the vector database
+        references = query_vector_db(question)
+
+        print("Refs: ", len(references))
+        # Append references if not already present in all_references
+        if references:
+            for ref in references:
+                # if ref not in all_references:
+                exists = False
+                for all_ref in all_references:
+                    if ref['id'] == all_ref['id']:
+                        exists = True
+                        break
+                if not exists:
+                    all_references.append(ref)
+
     # Generate response
-    response, found = generate_response(user_input, references)
+    response, found = generate_response(user_input, all_references, formatting)
+    # # Query the vector database
+    # references = query_vector_db(user_input)
+    
+    # # Generate response
+    # response, found = generate_response(user_input, references)
 
     # if found:
     # Format the excerpts and extract numbers
@@ -159,14 +270,30 @@ if st.button("Submit") and user_input:
     if not formatted_response:
         formatted_response = response
         extracted_numbers = []
-        
+    else:
+        final_response += formatted_response + "\n"
+    
+    refsUsed = []
+    if found:
+        for i, ref in enumerate(all_references, start=1):
+            if i in extracted_numbers:
+                # print(f"Excerpt {i}: {ref['content']}")
+                # if ref not in all_references:
+                # exists = False
+                # for all_ref in all_references:
+                #     if ref['id'] == all_ref['id']:
+                #         exists = True
+                #         break
+                # if not exists:
+                #     all_references.append(ref)
+                refsUsed.append(ref)
+
     # Update chat history
     st.session_state.chat_history.append({
         "user": user_input,
-        "assistant": formatted_response,
-        "references": references,
-        "found": found,
-        "excerpts": extracted_numbers
+        "assistant": final_response,
+        "references": all_references,
+        "found": len(refsUsed) > 0
     })
 
 # Display chat history
@@ -180,11 +307,11 @@ ref_content_len = 500
 for chat in st.session_state.chat_history:
     st.markdown(f"**You asked:** {chat['user']}")
     st.markdown(f"**PKA AI Assistant:** {chat['assistant']}")
-    print(chat["excerpts"])
+    # print(chat["excerpts"])
     if chat["references"] and chat["found"]:
         st.markdown("**References:**")
         for i, ref in enumerate(chat["references"], start=1):
-            if i in chat["excerpts"]:
+            # if i in chat["excerpts"]:
                 content_some = ref['content'][:ref_content_len] + "..." if len(ref['content']) > ref_content_len else ref['content']
                 st.markdown(f""":blue
                             - **Excerpt {i}:** 
