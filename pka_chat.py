@@ -238,7 +238,7 @@ if st.button("Submit") and user_input:
     all_references = []
     # Process each refined question
     for question in refined_questions:
-        st.markdown(f"**Processing question:** {question}")
+        # st.markdown(f"**Processing question:** {question}")
 
         # Query the vector database
         references = query_vector_db(question)
@@ -311,12 +311,12 @@ for chat in st.session_state.chat_history:
     if chat["references"] and chat["found"]:
         st.markdown("**References:**")
         for i, ref in enumerate(chat["references"], start=1):
-            # if i in chat["excerpts"]:
+            if i in chat["excerpts"]:
                 content_some = ref['content'][:ref_content_len] + "..." if len(ref['content']) > ref_content_len else ref['content']
                 st.markdown(f""":blue
                             - **Excerpt {i}:** 
                             {content_some} \n
-                            [REFERENCE from '{ref['book_title']}', Page: {ref['page_number']}]
+                            [REFERENCE from '{ref['book_title']}', Page: {ref['page_number']}, Similarity: {ref['similarity']}]
                             """)
     st.markdown("---")
 
