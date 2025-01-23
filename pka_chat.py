@@ -293,7 +293,8 @@ if st.button("Submit") and user_input:
         "user": user_input,
         "assistant": final_response,
         "references": all_references,
-        "found": len(refsUsed) > 0
+        "found": len(refsUsed) > 0,
+        "excerpts": extracted_numbers
     })
 
 # Display chat history
