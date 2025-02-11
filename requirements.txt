@@ -4,3 +4,7 @@ openai
 pgvector
 streamlit
 python-docx
+upstash_redis
+streamlit-local-storage
+urllib
+
