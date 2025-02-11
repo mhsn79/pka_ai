@@ -6,5 +6,5 @@ streamlit
 python-docx
 upstash_redis
 streamlit-local-storage
-urllib
+urllib3==2.2.3
 
