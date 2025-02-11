@@ -412,7 +412,7 @@ if st.button("Submit", key='btn_submit', disabled=st.session_state.get("disabled
 
     with placeholder.container():
         st.markdown(f"**You asked:** {user_input}")
-        st.write("Finding References from Prof. Khurdhid Ahmad's Library...")
+        st.write("Gathering References from Prof. Khurdhid Ahmad's Library...")
 
     final_response = ""
     all_references = []
@@ -441,10 +441,11 @@ if st.button("Submit", key='btn_submit', disabled=st.session_state.get("disabled
         st.markdown(f"**You asked:** {user_input}")
         st.write("Generating responce...")
 
+    st.markdown(f"**PKA AI Assistant:**")
     response, found = generate_response(user_input, all_references, formatting)
     with placeholder.container():
         st.markdown(f"**You asked:** {user_input}")
-        st.write("Done.")
+        st.write("Generating responce... ... Done.")
 
     # # Query the vector database
     # references = query_vector_db(user_input)
