@@ -53,12 +53,16 @@ st.set_page_config(layout="wide", page_title="From the Library of Prof. Khurshid
 #     cookie_manager.set("pka_ai_session_id", session_key)
 
 localS = LocalStorage()
-session_key = localS.getItem("pka_ai_session_id")
-print("Session Key from Local Storage: ", session_key)
-if not session_key:
-    session_key = "pka_ai.session." + datetime.now().strftime("%Y%m%d%H%M%S")
-    print("Creating new session key...", session_key)
-    localS.setItem("pka_ai_session_id", session_key)
+if localS:
+    session_key = localS.getItem("pka_ai_session_id")
+    if session_key:
+        print("Session Key from Local Storage: ", session_key)
+    else:
+        session_key = "pka_ai.session." + datetime.now().strftime("%Y%m%d%H%M%S")
+        print("Creating new session key...", session_key)
+        localS.setItem("pka_ai_session_id", session_key)
+else:
+    print("Error: Local Storage not available. History won't be saved.")
 
 # OpenAI API configuration
 # # OPENAI_API_KEY = "your_openai_api_key"
