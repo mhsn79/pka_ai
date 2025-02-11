@@ -323,7 +323,10 @@ def display_chat(id):
 
 def display_history():
     print("Displaying History...")
-    st.sidebar.write()
+    
+    st.sidebar.header("Past Conversations:")
+    st.sidebar.markdown("---")
+
     sc1, sc2 = st.sidebar.columns((6, 1))
 
     # history_keys = [key for key in reversed(list(st.context.cookies)) if key.startswith('history')]
@@ -349,7 +352,7 @@ def display_history():
                 #st.sidebar.info(f'Reload "{title}"', icon="💬")
                 # current_conversation = conversation_id
                 display_chat(conversation_id)
-                display_history()
+                #display_history()
 
             if sc2.button("❌", key=f"x{conversation_id}"):
                 st.sidebar.info("Conversation removed", icon="❌")
@@ -527,9 +530,7 @@ display_chat(current_conversation)
 #     # cookie_manager.set(st.session_state["conversation_id"], val={conversation_title: st.session_state["chat_history"]})
 #     redis.set(st.session_state["conversation_id"], urllib.parse.quote(json.dumps({conversation_title: st.session_state["chat_history"]})))
 
-st.sidebar.header("Past Conversations")
-
-if st.sidebar.button("New Conversation"):
+if st.sidebar.button("New Conversation", type="primary"):
     st.session_state["conversation_id"] = None
     current_conversation = None
     display_chat(None)
