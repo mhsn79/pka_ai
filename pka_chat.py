@@ -290,7 +290,7 @@ def display_chat(id):
         # for chat in st.session_state["chat_history"]:
         title = list(content.keys())[0]
         chat = content[title]
-        print("==================== Chat: ", chat)
+        # print("==================== Chat: ", chat)
         if chat:
             # if chat.get("id") and chat["id"] != current_conversation:
             #     continue
