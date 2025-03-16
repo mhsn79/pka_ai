@@ -21,7 +21,7 @@ limiter = Limiter(
     app=app,
     key_func=get_remote_address,
     storage_uri="memory://",  # Use in-memory storage for testing
-    default_limits=["200 per day", "50 per hour"]  # Default limits
+    default_limits=["50 per day", "10 per hour", "3 per minute"]  # Updated default limits
 )
 
 # Database configuration - load from environment variables
@@ -208,7 +208,7 @@ def format_excerpts_and_extract_numbers(response_text):
 
 # API Endpoints with rate limiting
 @app.route('/api/session/create', methods=['GET'])
-@limiter.limit("30 per minute")  # Limit session creation
+@limiter.limit("3 per minute")  # Updated limit
 def create_session():
     """
     Create a new unique session token and return it
@@ -220,7 +220,7 @@ def create_session():
     })
 
 @app.route('/api/history', methods=['GET'])
-@limiter.limit("60 per minute")  # Limit history requests
+@limiter.limit("3 per minute")  # Updated limit
 def get_chat_history():
     """
     Return chat history for a given session token
@@ -264,7 +264,7 @@ def get_chat_history():
     return jsonify({"history": history})
 
 @app.route('/api/delete_conversation', methods=['DELETE'])
-@limiter.limit("30 per minute")  # Limit deletion requests
+@limiter.limit("3 per minute")  # Updated limit
 def delete_conversation():
     """
     Delete a specific conversation
@@ -277,7 +277,7 @@ def delete_conversation():
     return jsonify({"status": "success", "message": "Conversation deleted"})
 
 @app.route('/api/chat', methods=['POST'])
-@limiter.limit("20 per minute, 100 per hour")  # Stricter limits for chat endpoint
+@limiter.limit("3 per minute")  # Updated limit
 def chat():
     """
     Process a chat request and return a streamed response
@@ -309,16 +309,6 @@ def chat():
             question_ur = parsed_data["Question"]["ur"]
             formatting = parsed_data["Formatting"] or "No specific formatting instructions provided."
             refined_questions = [question_en, question_ur]
-            
-            yield json.dumps({
-                "status": "processing", 
-                "step": "question_refined",
-                "refined_questions": {
-                    "en": question_en,
-                    "ur": question_ur
-                },
-                "formatting": formatting
-            }) + "\n"
             
         except Exception as e:
             yield json.dumps({"status": "error", "message": f"Error parsing refined questions: {str(e)}"}) + "\n"
