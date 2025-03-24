@@ -106,11 +106,16 @@ def refine_question(user_question):
     Refine the user's question to extract up to three distinct questions.
     """
     prompt = f"""
-    User's input is a question for chatbot. User may have asked question in unclear way and may have added unnecessary text and formatting intructions within the question. 
-    Your job is to separate the formatting intrections and provide refined question with clear keywords. Provide Question in English and it's translation in Urdu Language. 
+    User's input is a question for chatbot. User may have asked question in unclear way and may have added unnecessary text and formatting intructions within the question in any language. 
+    Your job is to:
+    - Detect the Language of the question, 
+    - Separate the formatting intructions and 
+    - Provide refined question with clear keywords. Provide Question in English and it's translation in Urdu Language. 
+    Provide detected language code as Language: <language code> in the output.
     Ensure the output strictly adheres to the following JSON format without quotes:
     
     {{
+        "Language": "<language code>",
         "Question": {{
             "en": "User's question in English",
             "ur": "User's question in Urdu"
@@ -400,7 +405,7 @@ if st.button("Submit", key='btn_submit', disabled=st.session_state.get("disabled
         question_en = parsed_data["Question"]["en"]  # English version of the question
         question_ur = parsed_data["Question"]["ur"]  # Urdu version of the question
         formatting = parsed_data["Formatting"]  # Formatting instructions
-
+        language = parsed_data["Language"]  # Language code
         # if not formatting:
         #     formatting = "No specific formatting instructions provided."
 
@@ -482,6 +487,7 @@ if st.button("Submit", key='btn_submit', disabled=st.session_state.get("disabled
         "user": user_input,
         "assistant": final_response,
         "title": conversation_title,
+        "language": language,
         "references": all_references,
         "found": len(refsUsed) > 0,
         "excerpts": extracted_numbers

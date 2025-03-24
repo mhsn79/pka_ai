@@ -9,10 +9,12 @@ import time
 from upstash_redis import Redis
 import urllib
 from datetime import datetime
-from flask import Flask, request, jsonify, Response, stream_with_context
+from flask import Flask, request, jsonify, Response, stream_with_context, send_file
 import uuid
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from gtts import gTTS
+import tempfile
 
 app = Flask(__name__)
 
@@ -67,11 +69,16 @@ def refine_question(user_question, model=DEFAULT_MODEL):
     Refine the user's question to extract questions in English and Urdu.
     """
     prompt = f"""
-    User's input is a question for chatbot. User may have asked question in unclear way and may have added unnecessary text and formatting intructions within the question. 
-    Your job is to separate the formatting intrections and provide refined question with clear keywords. Provide Question in English and it's translation in Urdu Language. 
+    User's input is a question for chatbot. User may have asked question in unclear way and may have added unnecessary text and formatting intructions within the question in any language. 
+    Your job is to:
+    - Detect the Language of the question, 
+    - Separate the formatting intructions and 
+    - Provide refined question with clear keywords. Provide Question in English and it's translation in Urdu Language. 
+    Provide detected language code as Language: <language code> in the output.
     Ensure the output strictly adheres to the following JSON format without quotes:
     
     {{
+        "Language": "<language code>",
         "Question": {{
             "en": "User's question in English",
             "ur": "User's question in Urdu"
@@ -288,7 +295,7 @@ def chat():
     
     user_input = data.get('query')
     session_token = data.get('session_token')
-    model = data.get('model', DEFAULT_MODEL)
+    model = DEFAULT_MODEL # data.get('model', DEFAULT_MODEL)
     
     if not user_input or not session_token:
         return jsonify({"error": "Missing required parameters"}), 400
@@ -308,6 +315,7 @@ def chat():
             question_en = parsed_data["Question"]["en"]
             question_ur = parsed_data["Question"]["ur"]
             formatting = parsed_data["Formatting"] or "No specific formatting instructions provided."
+            language = parsed_data["Language"]
             refined_questions = [question_en, question_ur]
             
         except Exception as e:
@@ -375,7 +383,8 @@ def chat():
             "title": conversation_title,
             "references": all_references,
             "found": len(refs_used) > 0,
-            "excerpts": extracted_numbers
+            "excerpts": extracted_numbers,
+            "language": language
         }
         
         redis.set(current_conversation, urllib.parse.quote(json.dumps({conversation_title: chat_data})))
@@ -392,6 +401,50 @@ def chat():
     
     # Return a streaming response
     return Response(stream_with_context(generate()), content_type='application/json')
+
+@app.route('/api/audio', methods=['GET'])
+@limiter.limit("3 per minute")
+def get_conversation_audio():
+    """
+    Generate and return audio for a conversation's assistant response
+    """
+    session_token = request.args.get('session_token')
+    conversation_id = request.args.get('conversation_id')
+    
+    if not session_token or not conversation_id:
+        return jsonify({"error": "Missing required parameters"}), 400
+    
+    # Get conversation data from Redis
+    conversation_data = redis.get(conversation_id)
+    if not conversation_data:
+        return jsonify({"error": "Conversation not found"}), 404
+    
+    try:
+        # Parse conversation data
+        conversation = json.loads(urllib.parse.unquote(conversation_data))
+        title = list(conversation.keys())[0]
+        chat = conversation[title]
+        
+        # Get assistant's response and language
+        response_text = chat["assistant"]
+        lang = chat.get("language", "en")  # Default to English if language not found
+        
+        # Create temporary file for audio
+        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+            # Generate audio using gTTS with stored language
+            tts = gTTS(text=response_text, lang=lang, slow=False)
+            tts.save(temp_file.name)
+            
+            # Return the audio file
+            return send_file(
+                temp_file.name,
+                mimetype='audio/mpeg',
+                as_attachment=True,
+                download_name=f'conversation_{conversation_id}_{lang}.mp3'
+            )
+            
+    except Exception as e:
+        return jsonify({"error": f"Error generating audio: {str(e)}"}), 500
 
 # Error handlers for rate limiting
 @app.errorhandler(429)
