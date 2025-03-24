@@ -410,6 +410,7 @@ def get_conversation_audio():
     """
     session_token = request.args.get('session_token')
     conversation_id = request.args.get('conversation_id')
+    temp_file = None
     
     if not session_token or not conversation_id:
         return jsonify({"error": "Missing required parameters"}), 400
@@ -429,8 +430,11 @@ def get_conversation_audio():
         response_text = chat["assistant"]
         lang = chat.get("language", "en")  # Default to English if language not found
         
-        # Create temporary file for audio
-        with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as temp_file:
+        # Create temporary file with unique name using conversation_id and timestamp
+        temp_filename = f"temp_audio_{conversation_id}_{int(time.time())}.mp3"
+        temp_file = tempfile.NamedTemporaryFile(suffix='.mp3', delete=False, prefix=f"temp_audio_{conversation_id}_")
+        
+        try:
             # Generate audio using gTTS with stored language
             tts = gTTS(text=response_text, lang=lang, slow=False)
             tts.save(temp_file.name)
@@ -442,8 +446,22 @@ def get_conversation_audio():
                 as_attachment=True,
                 download_name=f'conversation_{conversation_id}_{lang}.mp3'
             )
+        finally:
+            # Clean up the temporary file after sending
+            try:
+                temp_file.close()
+                os.unlink(temp_file.name)
+            except Exception as e:
+                print(f"Error cleaning up temporary file: {str(e)}")
             
     except Exception as e:
+        # Clean up temp file if it exists and there was an error
+        if temp_file:
+            try:
+                temp_file.close()
+                os.unlink(temp_file.name)
+            except:
+                pass
         return jsonify({"error": f"Error generating audio: {str(e)}"}), 500
 
 # Error handlers for rate limiting
