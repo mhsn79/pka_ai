@@ -1,14 +1,16 @@
-psycopg2-binary
-openai
+flask==3.0.2
+flask-limiter==3.5.0
+openai==1.12.0
+psycopg2-binary==2.9.9
+pgvector==0.2.5
+upstash-redis==1.0.1
+gtts==2.5.4
+python-dotenv==1.0.1
+Werkzeug==3.0.1
 # numpy==1.26.4
-pgvector
 streamlit
 python-docx
-upstash_redis
 streamlit-local-storage
 urllib3==2.2.3
-flask
-python-dotenv
 uuid
-Flask-Limiter
 
