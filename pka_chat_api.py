@@ -15,6 +15,25 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from gtts import gTTS
 import tempfile
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Validate required environment variables
+required_env_vars = {
+    'DB_HOST': os.environ.get('DB_HOST'),
+    'DB_NAME': os.environ.get('DB_NAME'),
+    'DB_USER': os.environ.get('DB_USER'),
+    'DB_PASSWORD': os.environ.get('DB_PASSWORD'),
+    'REDIS_DB': os.environ.get('REDIS_DB'),
+    'REDIS_TOKEN': os.environ.get('REDIS_TOKEN'),
+    'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY')
+}
+
+missing_vars = [var for var, value in required_env_vars.items() if not value]
+if missing_vars:
+    raise EnvironmentError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
 app = Flask(__name__)
 
@@ -26,21 +45,20 @@ limiter = Limiter(
     default_limits=["50 per day", "10 per hour", "3 per minute"]  # Updated default limits
 )
 
-# Database configuration - load from environment variables
-DB_HOST = os.environ.get("DB_HOST")
-DB_NAME = os.environ.get("DB_NAME")
-DB_USER = os.environ.get("DB_USER")
-DB_PASSWORD = os.environ.get("DB_PASSWORD")
+# Database configuration from validated environment variables
+DB_HOST = required_env_vars['DB_HOST']
+DB_NAME = required_env_vars['DB_NAME']
+DB_USER = required_env_vars['DB_USER']
+DB_PASSWORD = required_env_vars['DB_PASSWORD']
 
-# Redis configuration
-REDIS_DB = os.environ.get("REDIS_DB")
-REDIS_TOKEN = os.environ.get("REDIS_TOKEN")
+# Redis configuration from validated environment variables
+REDIS_DB = required_env_vars['REDIS_DB']
+REDIS_TOKEN = required_env_vars['REDIS_TOKEN']
 
 redis = Redis(url=REDIS_DB, token=REDIS_TOKEN)
 
-# OpenAI API configuration
-api_key = os.environ.get("CAPI_KEY")
-client = OpenAI(api_key=api_key)
+# OpenAI API configuration from validated environment variables
+client = OpenAI(api_key=required_env_vars['OPENAI_API_KEY'])
 
 # Default OpenAI model
 DEFAULT_MODEL = "gpt-4o"
